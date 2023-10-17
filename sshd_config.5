@@ -969,6 +969,16 @@ or
 .Cm no .
 .Cm ChallengeResponseAuthentication
 is a deprecated alias for this.
+.It Cm KbdInteractiveLegacyInstructions
+Specifies whether to disable immediate instructions notifications when
+using keyboard-interactive authentication in order to support older clients
+that may not support immediate instructions.
+The default is
+.Cm no .
+The argument to this keyword must be
+.Cm yes
+or
+.Cm no .
 .It Cm KerberosAuthentication
 Specifies whether the password provided by the user for
 .Cm PasswordAuthentication
@@ -1289,6 +1299,7 @@ Available keywords are
 .Cm Include ,
 .Cm IPQoS ,
 .Cm KbdInteractiveAuthentication ,
+.Cm KbdInteractiveLegacyInstructions ,
 .Cm KerberosAuthentication ,
 .Cm LogLevel ,
 .Cm MaxAuthTries ,

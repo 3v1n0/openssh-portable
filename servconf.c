@@ -138,6 +138,7 @@ initialize_server_options(ServerOptions *options)
 	options->gss_strict_acceptor = -1;
 	options->password_authentication = -1;
 	options->kbd_interactive_authentication = -1;
+	options->kbd_interactive_legacy_instructions = -1;
 	options->permit_empty_passwd = -1;
 	options->permit_user_env = -1;
 	options->permit_user_env_allowlist = NULL;
@@ -366,6 +367,8 @@ fill_default_server_options(ServerOptions *options)
 		options->password_authentication = 1;
 	if (options->kbd_interactive_authentication == -1)
 		options->kbd_interactive_authentication = 1;
+	if (options->kbd_interactive_legacy_instructions == -1)
+		options->kbd_interactive_legacy_instructions = 0;
 	if (options->permit_empty_passwd == -1)
 		options->permit_empty_passwd = 0;
 	if (options->permit_user_env == -1) {
@@ -531,6 +534,7 @@ typedef enum {
 	sAllowStreamLocalForwarding, sFingerprintHash, sDisableForwarding,
 	sExposeAuthInfo, sRDomain, sPubkeyAuthOptions, sSecurityKeyProvider,
 	sRequiredRSASize, sChannelTimeout, sUnusedConnectionTimeout,
+	sKbdInteractiveLegacyInstructions,
 	sDeprecated, sIgnore, sUnsupported
 } ServerOpCodes;
 
@@ -610,6 +614,7 @@ static struct {
 	{ "kbdinteractiveauthentication", sKbdInteractiveAuthentication, SSHCFG_ALL },
 	{ "challengeresponseauthentication", sKbdInteractiveAuthentication, SSHCFG_ALL }, /* alias */
 	{ "skeyauthentication", sKbdInteractiveAuthentication, SSHCFG_ALL }, /* alias */
+	{ "kbdinteractivelegacyinstructions", sKbdInteractiveLegacyInstructions, SSHCFG_ALL },
 	{ "checkmail", sDeprecated, SSHCFG_GLOBAL },
 	{ "listenaddress", sListenAddress, SSHCFG_GLOBAL },
 	{ "addressfamily", sAddressFamily, SSHCFG_GLOBAL },
@@ -1630,6 +1635,10 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 
 	case sKbdInteractiveAuthentication:
 		intptr = &options->kbd_interactive_authentication;
+		goto parse_flag;
+
+	case sKbdInteractiveLegacyInstructions:
+		intptr = &options->kbd_interactive_legacy_instructions;
 		goto parse_flag;
 
 	case sPrintMotd:
@@ -3062,6 +3071,8 @@ dump_config(ServerOptions *o)
 	dump_cfg_fmtint(sPasswordAuthentication, o->password_authentication);
 	dump_cfg_fmtint(sKbdInteractiveAuthentication,
 	    o->kbd_interactive_authentication);
+	dump_cfg_fmtint(sKbdInteractiveLegacyInstructions,
+	    o->kbd_interactive_legacy_instructions);
 	dump_cfg_fmtint(sPrintMotd, o->print_motd);
 #ifndef DISABLE_LASTLOG
 	dump_cfg_fmtint(sPrintLastLog, o->print_lastlog);

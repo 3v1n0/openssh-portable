@@ -140,6 +140,7 @@ typedef enum _SshPamDone {
 	SshPamError = -1,
 	SshPamNone,
 	SshPamAuthenticated,
+	SshPamAgain,
 } SshPamDone;
 
 struct pam_ctxt {
@@ -869,6 +870,8 @@ sshpam_query(void *ctx, char **name, char **info,
 	**prompts = NULL;
 	plen = 0;
 	*echo_on = xmalloc(sizeof(u_int));
+	ctxt->pam_done = SshPamNone;
+
 	while (ssh_msg_recv(ctxt->pam_psock, buffer) == 0) {
 		if (++nmesg > PAM_MAX_NUM_MSG)
 			fatal_f("too many query messages");
@@ -889,6 +892,16 @@ sshpam_query(void *ctx, char **name, char **info,
 			return (0);
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
+			if (!options.kbd_interactive_legacy_instructions) {
+				*num = 0;
+				free(*info);
+				*info = msg; /* Steal the message */
+				msg = NULL;
+				ctxt->pam_done = SshPamAgain;
+				sshbuf_free(buffer);
+				return (0);
+			}
+
 			/* accumulate messages */
 			len = plen + mlen + 2;
 			**prompts = xreallocarray(**prompts, 1, len);
@@ -1002,6 +1015,8 @@ sshpam_respond(void *ctx, u_int num, char **resp)
 		return KbdintResultSuccess;
 	case SshPamNone:
 		break;
+	case SshPamAgain:
+		return KbdintResultAgain;
 	default:
 		return KbdintResultFailure;
 	}
