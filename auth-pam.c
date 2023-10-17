@@ -147,6 +147,7 @@ struct pam_ctxt {
 	sp_pthread_t	 pam_thread;
 	int		 pam_psock;
 	int		 pam_csock;
+	int		 pam_accumulate_instructions;
 	SshPamDone	 pam_done;
 };
 
@@ -836,6 +837,8 @@ sshpam_init_ctx(Authctxt *authctxt)
 	}
 	ctxt->pam_psock = socks[0];
 	ctxt->pam_csock = socks[1];
+	ctxt->pam_accumulate_instructions =
+		options.kbd_interactive_legacy_instructions;
 	result = pthread_create(&ctxt->pam_thread, NULL, sshpam_thread, ctxt);
 	if (result != 0) {
 		error("PAM: failed to start authentication thread: %s",
@@ -847,6 +850,17 @@ sshpam_init_ctx(Authctxt *authctxt)
 	}
 	cleanup_ctxt = ctxt;
 	return (ctxt);
+}
+
+static void *
+sshpam_legacy_init_ctx(Authctxt *authctxt)
+{
+	struct pam_ctxt *ctxt = sshpam_init_ctx(authctxt);
+	if (ctxt == NULL)
+		return NULL;
+
+	ctxt->pam_accumulate_instructions = 1;
+	return ctxt;
 }
 
 static int
@@ -892,7 +906,7 @@ sshpam_query(void *ctx, char **name, char **info,
 			return (0);
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
-			if (!options.kbd_interactive_legacy_instructions) {
+			if (!ctxt->pam_accumulate_instructions) {
 				*num = 0;
 				free(*info);
 				*info = msg; /* Steal the message */
@@ -1072,6 +1086,22 @@ KbdintDevice sshpam_device = {
 KbdintDevice mm_sshpam_device = {
 	"pam",
 	mm_sshpam_init_ctx,
+	mm_sshpam_query,
+	mm_sshpam_respond,
+	mm_sshpam_free_ctx
+};
+
+KbdintDevice sshpam_device_legacy = {
+	"pam-legacy-instructions",
+	sshpam_legacy_init_ctx,
+	sshpam_query,
+	sshpam_respond,
+	sshpam_free_ctx
+};
+
+KbdintDevice mm_sshpam_device_legacy = {
+	"pam-legacy-instructions",
+	mm_sshpam_legacy_init_ctx,
 	mm_sshpam_query,
 	mm_sshpam_respond,
 	mm_sshpam_free_ctx

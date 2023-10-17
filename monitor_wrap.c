@@ -790,6 +790,30 @@ mm_sshpam_free_ctx(void *ctxtp)
 	    MONITOR_ANS_PAM_FREE_CTX, m);
 	sshbuf_free(m);
 }
+
+void *
+mm_sshpam_legacy_init_ctx(Authctxt *authctxt)
+{
+	struct sshbuf *m;
+	int r, success;
+
+	debug3("%s", __func__);
+	if ((m = sshbuf_new()) == NULL)
+		fatal("%s: sshbuf_new failed", __func__);
+	mm_request_send(pmonitor->m_recvfd, MONITOR_REQ_PAM_LEGACY_INIT_CTX, m);
+	debug3("%s: waiting for MONITOR_ANS_PAM_LEGACY_INIT_CTX", __func__);
+	mm_request_receive_expect(pmonitor->m_recvfd,
+	    MONITOR_ANS_PAM_LEGACY_INIT_CTX, m);
+	if ((r = sshbuf_get_u32(m, &success)) != 0)
+		fatal("%s: buffer error: %s", __func__, ssh_err(r));
+	if (success == 0) {
+		debug3("%s: pam_legacy_init_ctx failed", __func__);
+		sshbuf_free(m);
+		return (NULL);
+	}
+	sshbuf_free(m);
+	return (authctxt);
+}
 #endif /* USE_PAM */
 
 /* Request process termination */

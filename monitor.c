@@ -135,6 +135,8 @@ int mm_answer_pam_init_ctx(struct ssh *, int, struct sshbuf *);
 int mm_answer_pam_query(struct ssh *, int, struct sshbuf *);
 int mm_answer_pam_respond(struct ssh *, int, struct sshbuf *);
 int mm_answer_pam_free_ctx(struct ssh *, int, struct sshbuf *);
+
+int mm_answer_pam_legacy_init_ctx(struct ssh *, int, struct sshbuf *);
 #endif
 
 #ifdef GSSAPI
@@ -199,6 +201,8 @@ struct mon_table mon_dispatch_proto20[] = {
     {MONITOR_REQ_PAM_QUERY, 0, mm_answer_pam_query},
     {MONITOR_REQ_PAM_RESPOND, MON_ONCE, mm_answer_pam_respond},
     {MONITOR_REQ_PAM_FREE_CTX, MON_ONCE|MON_AUTHDECIDE, mm_answer_pam_free_ctx},
+
+    {MONITOR_REQ_PAM_LEGACY_INIT_CTX, MON_ONCE, mm_answer_pam_legacy_init_ctx},
 #endif
 #ifdef SSH_AUDIT_EVENTS
     {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
@@ -991,8 +995,10 @@ mm_answer_pam_start(struct ssh *ssh, int sock, struct sshbuf *m)
 	start_pam(ssh);
 
 	monitor_permit(mon_dispatch, MONITOR_REQ_PAM_ACCOUNT, 1);
-	if (options.kbd_interactive_authentication)
+	if (options.kbd_interactive_authentication) {
 		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_INIT_CTX, 1);
+		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_LEGACY_INIT_CTX, 1);
+	}
 
 	return (0);
 }
@@ -1142,9 +1148,37 @@ mm_answer_pam_free_ctx(struct ssh *ssh, int sock, struct sshbuf *m)
 	mm_request_send(sock, MONITOR_ANS_PAM_FREE_CTX, m);
 	/* Allow another attempt */
 	monitor_permit(mon_dispatch, MONITOR_REQ_PAM_INIT_CTX, 1);
+	monitor_permit(mon_dispatch, MONITOR_REQ_PAM_LEGACY_INIT_CTX, 1);
 	auth_method = "keyboard-interactive";
 	auth_submethod = "pam";
 	return r;
+}
+
+extern KbdintDevice sshpam_device_legacy;
+
+int
+mm_answer_pam_legacy_init_ctx(struct ssh *ssh, int sock, struct sshbuf *m)
+{
+	u_int ok = 0;
+	int r;
+
+	debug3("%s", __func__);
+	if (!options.kbd_interactive_authentication)
+		fatal("%s: kbd-int authentication not enabled", __func__);
+	if (sshpam_ctxt != NULL)
+		fatal("%s: already called", __func__);
+	sshpam_ctxt = (sshpam_device_legacy.init_ctx)(authctxt);
+	sshpam_authok = NULL;
+	sshbuf_reset(m);
+	if (sshpam_ctxt != NULL) {
+		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_FREE_CTX, 1);
+		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_QUERY, 1);
+		ok = 1;
+	}
+	if ((r = sshbuf_put_u32(m, ok)) != 0)
+		fatal("%s: buffer error: %s", __func__, ssh_err(r));
+	mm_request_send(sock, MONITOR_ANS_PAM_LEGACY_INIT_CTX, m);
+	return (0);
 }
 #endif
 

@@ -105,8 +105,10 @@ kbdint_alloc(const char *devs)
 	int i, r;
 
 #ifdef USE_PAM
-	if (!options.use_pam)
+	if (!options.use_pam) {
 		remove_kbdint_device("pam");
+		remove_kbdint_device("pam-legacy-instructions");
+	}
 #endif
 
 	kbdintctxt = xcalloc(1, sizeof(KbdintAuthctxt));
@@ -370,6 +372,7 @@ privsep_challenge_enable(void)
 #endif
 #ifdef USE_PAM
 	extern KbdintDevice mm_sshpam_device;
+	extern KbdintDevice mm_sshpam_device_legacy;
 #endif
 
 #ifdef BSD_AUTH
@@ -377,6 +380,7 @@ privsep_challenge_enable(void)
 #else
 #ifdef USE_PAM
 	devices[n++] = &mm_sshpam_device;
+	devices[n++] = &mm_sshpam_device_legacy;
 #endif
 #endif
 }

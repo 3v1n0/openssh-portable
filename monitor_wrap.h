@@ -73,6 +73,7 @@ OM_uint32 mm_ssh_gssapi_checkmic(Gssctxt *, gss_buffer_t, gss_buffer_t);
 void mm_start_pam(struct ssh *ssh);
 u_int mm_do_pam_account(void);
 void *mm_sshpam_init_ctx(struct Authctxt *);
+void *mm_sshpam_legacy_init_ctx(struct Authctxt *);
 int mm_sshpam_query(void *, char **, char **, u_int *, char ***, u_int **);
 int mm_sshpam_respond(void *, u_int, char **);
 void mm_sshpam_free_ctx(void *);
