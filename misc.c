@@ -3063,3 +3063,42 @@ lib_contains_symbol(const char *path, const char *s)
 	return ret;
 #endif /* HAVE_NLIST_H */
 }
+
+ssize_t
+write_msg(const char *str, int flags)
+{
+	int output;
+	int output_fileno;
+	int needs_close;
+	ssize_t ret;
+
+	needs_close = 0;
+	output_fileno = (flags & WRITE_MSG_STDOUT) ? STDOUT_FILENO : STDERR_FILENO;
+
+	if (isatty(output_fileno)) {
+		output = output_fileno;
+	} else if ((output = open(_PATH_TTY, O_WRONLY)) != -1) {
+		needs_close = 1;
+	} else {
+		if (flags & WRITE_MSG_REQUIRE_TTY) {
+			errno = ENOTTY;
+			return -1;
+		}
+
+		output = output_fileno;
+	}
+
+	if (write(output, "\r", 1) == -1)
+		return -1;
+
+	if ((ret = write(output, str, strlen(str))) == -1)
+		return ret;
+
+	if (write(output, "\r\n", 2) == -1)
+		return -1;
+
+	if (needs_close)
+		close(output);
+
+	return ret;
+}

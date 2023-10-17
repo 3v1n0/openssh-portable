@@ -1103,8 +1103,11 @@ input_userauth_passwd_changereq(int type, u_int32_t seqnr, struct ssh *ssh)
 	if ((r = sshpkt_get_cstring(ssh, &info, NULL)) != 0 ||
 	    (r = sshpkt_get_cstring(ssh, &lang, NULL)) != 0)
 		goto out;
-	if (strlen(info) > 0)
-		logit("%s", info);
+	if (strlen(info) > 0) {
+		debug("%s", info);
+		if (write_msg(info, WRITE_MSG_REQUIRE_TTY) == -1)
+			goto out;
+	}
 	if ((r = sshpkt_start(ssh, SSH2_MSG_USERAUTH_REQUEST)) != 0 ||
 	    (r = sshpkt_put_cstring(ssh, authctxt->server_user)) != 0 ||
 	    (r = sshpkt_put_cstring(ssh, authctxt->service)) != 0 ||
@@ -1953,10 +1956,16 @@ input_userauth_info_req(int type, u_int32_t seq, struct ssh *ssh)
 	    (r = sshpkt_get_cstring(ssh, &inst, NULL)) != 0 ||
 	    (r = sshpkt_get_cstring(ssh, &lang, NULL)) != 0)
 		goto out;
-	if (strlen(name) > 0)
-		logit("%s", name);
-	if (strlen(inst) > 0)
-		logit("%s", inst);
+	if (strlen(name) > 0) {
+		debug("%s", name);
+		if (write_msg(name, WRITE_MSG_REQUIRE_TTY) == -1)
+			goto out;
+	}
+	if (strlen(inst) > 0) {
+		debug("%s", inst);
+		if (write_msg(inst, WRITE_MSG_REQUIRE_TTY) == -1)
+			goto out;
+	}
 
 	if ((r = sshpkt_get_u32(ssh, &num_prompts)) != 0)
 		goto out;

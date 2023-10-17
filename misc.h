@@ -247,4 +247,10 @@ sshsig_t ssh_signal(int, sshsig_t);
 /* On OpenBSD time_t is int64_t which is long long. */
 /* #define SSH_TIME_T_MAX LLONG_MAX */
 
+#define WRITE_MSG_NONE		0x0000
+#define WRITE_MSG_STDOUT	0x0001
+#define WRITE_MSG_REQUIRE_TTY	0x0002
+
+ssize_t write_msg(const char *, int flags);
+
 #endif /* _MISC_H */
