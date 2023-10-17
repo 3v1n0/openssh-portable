@@ -51,6 +51,7 @@ struct sshauthopt;
 typedef struct Authctxt Authctxt;
 typedef struct Authmethod Authmethod;
 typedef struct KbdintDevice KbdintDevice;
+typedef enum KbdintResult KbdintResult;
 
 struct Authctxt {
 	sig_atomic_t	 success;
@@ -109,6 +110,12 @@ struct Authmethod {
 	char	*synonym;
 	int	(*userauth)(struct ssh *, const char *);
 	int	*enabled;
+};
+
+enum KbdintResult {
+	KbdintResultFailure = -1,
+	KbdintResultSuccess,
+	KbdintResultAgain,
 };
 
 /*
